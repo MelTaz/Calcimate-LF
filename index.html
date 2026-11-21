@@ -13,6 +13,9 @@
   <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='112' fill='%230f766e'/%3E%3Ccircle cx='256' cy='256' r='168' fill='none' stroke='%2399f6e4' stroke-width='28'/%3E%3Ctext x='256' y='292' font-family='system-ui,sans-serif' font-size='150' font-weight='800' fill='%23ffffff' text-anchor='middle'%3ECa%3C/text%3E%3C/svg%3E" />
   <link rel="manifest" href="data:application/manifest+json,%7B%22name%22%3A%22CalciMate%20LF%22%2C%22short_name%22%3A%22CalciMate%22%2C%22start_url%22%3A%22.%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%23f8fafc%22%2C%22theme_color%22%3A%22%230f766e%22%7D" />
 
+  <!-- Lightweight Barcode Scanner Library -->
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js" defer></script>
+
   <style>
     :root {
       --primary: #0f766e;
@@ -117,11 +120,23 @@
       cursor: pointer;
       display: inline-flex;
       align-items: center;
-      gap: 4px;
+      gap: 5px;
     }
 
     .icon-btn:active {
       transform: scale(0.96);
+    }
+
+    .key-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #fbbf24;
+      display: inline-block;
+    }
+
+    .key-dot.ready {
+      background: #4ade80;
     }
 
     main {
@@ -262,6 +277,7 @@
       font-size: 14px;
       outline: none;
       background: #f8fafc;
+      min-width: 0;
     }
 
     .quick-input:focus {
@@ -279,10 +295,34 @@
       font-size: 13px;
       cursor: pointer;
       white-space: nowrap;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
     }
 
     .btn-primary:active {
       background: var(--primary-dark);
+    }
+
+    .btn-primary:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .btn-accent {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-weight: 700;
+      font-size: 13px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
     }
 
     .quick-hint {
@@ -357,7 +397,8 @@
     .item-right {
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 8px;
+      flex-shrink: 0;
     }
 
     .item-mg {
@@ -372,6 +413,17 @@
       width: 26px;
       height: 26px;
       border-radius: 8px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .mini-log-btn {
+      background: #f0fdfa;
+      color: var(--primary-dark);
+      border: 1px solid #99f6e4;
+      border-radius: 8px;
+      padding: 4px 8px;
+      font-size: 11px;
       font-weight: 700;
       cursor: pointer;
     }
@@ -442,6 +494,57 @@
     .badge-lf { background: #dcfce7; color: #166534; }
     .badge-fort { background: #e0f2fe; color: #075985; }
     .badge-low { background: #fef3c7; color: #92400e; }
+    .badge-saved { background: #f3e8ff; color: #6b21a8; }
+
+    /* Scanner Action Bar & Online Lookup */
+    .scan-bar {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .online-box {
+      background: #f8fafc;
+      border: 1px dashed #94a3b8;
+      border-radius: 12px;
+      padding: 12px;
+      margin-bottom: 12px;
+    }
+
+    .online-results {
+      margin-top: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .online-item {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .toast-banner {
+      background: #dcfce7;
+      border: 1px solid #86efac;
+      color: #14532d;
+      border-radius: 12px;
+      padding: 10px 12px;
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 12px;
+      display: none;
+    }
+
+    .toast-banner.show {
+      display: block;
+    }
 
     /* Food Bank & Custom Food */
     .search-box {
@@ -450,7 +553,7 @@
       border-radius: 12px;
       border: 1px solid var(--border);
       font-size: 15px;
-      margin-bottom: 12px;
+      margin-bottom: 10px;
       background: #fff;
     }
 
@@ -475,6 +578,7 @@
       border: 1px solid var(--border);
       border-radius: 10px;
       font-size: 13px;
+      background: #fff;
     }
 
     /* 7-Day Trends */
@@ -589,7 +693,7 @@
     .overlay {
       position: fixed;
       inset: 0;
-      background: rgba(15, 23, 42, 0.5);
+      background: rgba(15, 23, 42, 0.55);
       display: none;
       align-items: flex-end;
       justify-content: center;
@@ -604,12 +708,12 @@
       background: #fff;
       width: 100%;
       max-width: 600px;
-      max-height: 86vh;
+      max-height: 88vh;
       border-radius: 22px 22px 0 0;
       padding: 16px 16px calc(20px + var(--safe-bottom));
       display: flex;
       flex-direction: column;
-      overflow: hidden;
+      overflow-y: auto;
     }
 
     .sheet-header {
@@ -638,7 +742,7 @@
     .food-scroll {
       overflow-y: auto;
       flex: 1;
-      margin-top: 8px;
+      margin-top: 6px;
     }
 
     .food-pick {
@@ -653,7 +757,7 @@
     .mult-row {
       display: flex;
       gap: 6px;
-      margin: 10px 0;
+      margin: 8px 0;
       align-items: center;
       flex-wrap: wrap;
     }
@@ -678,7 +782,7 @@
       display: flex;
       flex-direction: column;
       gap: 10px;
-      margin-top: 10px;
+      margin-top: 8px;
     }
 
     .btn-secondary {
@@ -692,6 +796,22 @@
       cursor: pointer;
       text-align: center;
     }
+
+    .settings-box {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px;
+      margin-bottom: 12px;
+    }
+
+    #qr-reader {
+      width: 100%;
+      border-radius: 14px;
+      overflow: hidden;
+      background: #0f172a;
+      min-height: 240px;
+    }
   </style>
 </head>
 <body>
@@ -704,7 +824,10 @@
       </div>
       <div class="header-controls">
         <span class="rdi-pill">1,000 mg RDI</span>
-        <button class="icon-btn" onclick="openBackupModal()">Backup</button>
+        <button class="icon-btn" onclick="openSettingsModal()">
+          <span class="key-dot" id="ai-status-dot"></span>
+          Settings
+        </button>
       </div>
     </div>
   </header>
@@ -755,7 +878,7 @@
           </select>
           <button class="btn-primary" onclick="parseQuickLog()">Log</button>
         </div>
-        <div class="quick-hint">Type ingredients separated by commas to auto-match &amp; log.</div>
+        <div class="quick-hint">Type saved foods separated by commas to auto-match &amp; log.</div>
       </div>
 
       <div id="meal-sections"></div>
@@ -768,10 +891,24 @@
 
     <!-- TAB 2: FOOD BANK -->
     <section id="tab-foods" class="tab-panel">
-      <div class="custom-form">
-        <div style="font-weight:800;font-size:14px;">+ Add Custom Lactose-Free Food</div>
+      <div class="toast-banner" id="bank-toast"></div>
+
+      <!-- Camera Barcode + Nutrition Label AI Scan Buttons -->
+      <div class="scan-bar">
+        <button class="btn-primary" onclick="openBarcodeScanner()">&#128247; Scan Barcode</button>
+        <button class="btn-accent" onclick="triggerLabelPhoto('bank')">&#129534; Snap Label (AI)</button>
+      </div>
+      <input type="file" id="label-photo-input" accept="image/*" capture="environment" style="display:none;" onchange="handleLabelPhotoUpload(event)" />
+
+      <!-- Search Local + Online Food Bank -->
+      <input type="search" id="bank-search" class="search-box" placeholder="Search saved foods or look up online..." oninput="renderFoodBank()" />
+      <div id="bank-online-prompt"></div>
+
+      <!-- Manual Custom Food Entry -->
+      <details class="custom-form" id="manual-food-details">
+        <summary style="font-weight:800;font-size:14px;cursor:pointer;">+ Add Custom Food Manually</summary>
         <div class="form-grid">
-          <input type="text" id="cust-name" placeholder="Food name (e.g. Vitasoy Soy)" />
+          <input type="text" id="cust-name" placeholder="Brand & food name" />
           <input type="text" id="cust-serve" placeholder="Serving (e.g. 200 ml)" />
           <input type="number" id="cust-mg" placeholder="Calcium (mg)" />
           <select id="cust-tag">
@@ -780,10 +917,9 @@
             <option value="LOW">Naturally Low-Lactose</option>
           </select>
         </div>
-        <button class="btn-primary" style="width:100%;margin-top:10px;" onclick="saveCustomFood()">Save to Food Bank</button>
-      </div>
+        <button class="btn-primary" style="width:100%;margin-top:10px;" onclick="saveManualCustomFood()">Save to Food Bank</button>
+      </details>
 
-      <input type="search" id="bank-search" class="search-box" placeholder="Search Australian lactose-free foods..." oninput="renderFoodBank()" />
       <div class="meal-card" id="food-bank-list"></div>
     </section>
 
@@ -823,14 +959,17 @@
     </button>
   </nav>
 
-  <!-- ADD FOOD BOTTOM SHEET -->
+  <!-- ADD FOOD BOTTOM SHEET (DIARY) -->
   <div class="overlay" id="add-overlay" onclick="if(event.target===this) closeAddSheet()">
     <div class="sheet">
       <div class="sheet-header">
         <div class="sheet-title" id="sheet-meal-title">Add to Breakfast</div>
         <button class="close-btn" onclick="closeAddSheet()">&times;</button>
       </div>
-      <input type="search" id="sheet-search" class="search-box" style="margin-bottom:6px;" placeholder="Search foods..." oninput="renderSheetFoods()" />
+      <div style="display:flex;gap:6px;margin-bottom:8px;">
+        <input type="search" id="sheet-search" class="search-box" style="margin-bottom:0;" placeholder="Search saved or online foods..." oninput="renderSheetFoods()" />
+        <button class="btn-primary" onclick="openBarcodeScanner('diary')" title="Scan Barcode">&#128247;</button>
+      </div>
       <div class="mult-row">
         <span style="font-size:12px;font-weight:700;color:var(--muted);">Serving:</span>
         <button class="mult-btn" onclick="setMult(0.5, this)">0.5&times;</button>
@@ -838,20 +977,49 @@
         <button class="mult-btn" onclick="setMult(1.5, this)">1.5&times;</button>
         <button class="mult-btn" onclick="setMult(2, this)">2&times;</button>
       </div>
+      <div id="sheet-online-prompt"></div>
       <div class="food-scroll" id="sheet-food-list"></div>
     </div>
   </div>
 
-  <!-- BACKUP EXPORT / IMPORT MODAL -->
-  <div class="overlay" id="backup-overlay" onclick="if(event.target===this) closeBackupModal()">
+  <!-- BARCODE SCANNER MODAL -->
+  <div class="overlay" id="scanner-overlay" onclick="if(event.target===this) closeBarcodeScanner()">
     <div class="sheet">
       <div class="sheet-header">
-        <div class="sheet-title">Backup &amp; Restore Log</div>
-        <button class="close-btn" onclick="closeBackupModal()">&times;</button>
+        <div class="sheet-title">Scan Supermarket Barcode</div>
+        <button class="close-btn" onclick="closeBarcodeScanner()">&times;</button>
       </div>
-      <p style="font-size:13px;color:var(--muted);margin:0 0 10px;line-height:1.45;">
-        Your diary is stored privately on this phone. Export a JSON backup anytime to save to Files or Google Drive.
-      </p>
+      <div id="qr-reader"></div>
+      <div id="scanner-status" style="font-size:13px;color:var(--muted);margin-top:10px;text-align:center;">
+        Point your rear camera at the product barcode.
+      </div>
+      <div style="display:flex;gap:8px;margin-top:12px;">
+        <button class="btn-accent" style="flex:1;" onclick="switchToLabelFallback()">No Barcode / Snap Label (AI)</button>
+        <button class="btn-secondary" onclick="closeBarcodeScanner()">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SETTINGS & BACKUP MODAL -->
+  <div class="overlay" id="settings-overlay" onclick="if(event.target===this) closeSettingsModal()">
+    <div class="sheet">
+      <div class="sheet-header">
+        <div class="sheet-title">Settings &amp; Backup</div>
+        <button class="close-btn" onclick="closeSettingsModal()">&times;</button>
+      </div>
+
+      <div class="settings-box">
+        <div style="font-weight:800;font-size:14px;margin-bottom:4px;">Gemini AI Key (Optional Fallback)</div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:8px;line-height:1.4;">
+          Used to read Nutrition Information Panels from photos and estimate calcium when a food isn't on Open Food Facts. Saved privately on your phone only.
+        </div>
+        <div style="display:flex;gap:6px;">
+          <input type="password" id="gemini-key-input" class="quick-input" placeholder="Paste Google AI Studio key (AIza...)" />
+          <button class="btn-primary" onclick="saveApiKey()">Save Key</button>
+        </div>
+        <div id="key-saved-msg" style="font-size:11px;color:var(--success);font-weight:700;margin-top:5px;"></div>
+      </div>
+
       <div class="backup-actions">
         <button class="btn-primary" onclick="exportBackup()">Download JSON Backup</button>
         <label class="btn-secondary" style="cursor:pointer;">
@@ -865,6 +1033,7 @@
 
   <script>
     const DAILY_GOAL = 1000;
+    const GEMINI_MODEL = 'gemini-2.5-flash';
 
     const DEFAULT_FOODS = [
       { id: 'f1', name: 'Canned Sardines (with bones)', serve: '90 g', mg: 325, tag: 'LF', kw: ['sardines', 'sardine'] },
@@ -896,11 +1065,15 @@
 
     const MEALS = ['Breakfast', 'Lunch', 'Dinner', 'Snacks'];
     const STORAGE_KEY = 'calcimate_lf_v1';
+    const API_KEY_STORAGE = 'calcimate_gemini_key';
 
     let state = loadState();
     let currentDate = todayStr();
     let activeMeal = 'Breakfast';
     let currentMult = 1;
+    let html5QrCode = null;
+    let scanReturnTarget = 'bank'; // 'bank' or 'diary'
+    let labelReturnTarget = 'bank';
 
     function todayStr() {
       const d = new Date();
@@ -925,8 +1098,82 @@
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     }
 
+    function getApiKey() {
+      return (localStorage.getItem(API_KEY_STORAGE) || '').trim();
+    }
+
+    function saveApiKey() {
+      const val = document.getElementById('gemini-key-input').value.trim();
+      if (val) {
+        localStorage.setItem(API_KEY_STORAGE, val);
+        document.getElementById('key-saved-msg').textContent = 'API key saved privately on this device.';
+      } else {
+        localStorage.removeItem(API_KEY_STORAGE);
+        document.getElementById('key-saved-msg').textContent = 'API key cleared.';
+      }
+      updateKeyIndicator();
+    }
+
+    function updateKeyIndicator() {
+      const dot = document.getElementById('ai-status-dot');
+      if (dot) dot.classList.toggle('ready', Boolean(getApiKey()));
+    }
+
     function allFoods() {
       return [...state.customFoods, ...DEFAULT_FOODS].sort((a, b) => b.mg - a.mg);
+    }
+
+    function addToFoodBank(item, sourceLabel) {
+      const cleanName = item.name.trim();
+      const serve = (item.serve || '1 serving').trim();
+      const mg = Math.max(0, Math.round(Number(item.mg) || 0));
+      const tag = ['LF', 'FORT', 'LOW'].includes(item.tag) ? item.tag : 'LF';
+
+      // Avoid duplicate exact name + serving entries
+      const existingIdx = state.customFoods.findIndex(
+        f => f.name.toLowerCase() === cleanName.toLowerCase() && f.serve.toLowerCase() === serve.toLowerCase()
+      );
+
+      const keywords = Array.from(new Set([
+        cleanName.toLowerCase(),
+        ...cleanName.toLowerCase().split(/\s+/).filter(w => w.length >= 4)
+      ]));
+
+      const savedObj = {
+        id: existingIdx >= 0 ? state.customFoods[existingIdx].id : 'c_' + Date.now() + Math.floor(Math.random() * 100),
+        name: cleanName,
+        serve,
+        mg,
+        tag,
+        custom: true,
+        kw: keywords
+      };
+
+      if (existingIdx >= 0) {
+        state.customFoods[existingIdx] = savedObj;
+      } else {
+        state.customFoods.unshift(savedObj);
+      }
+
+      saveState();
+      renderAll();
+      showBankToast(`Saved "${cleanName}" (${mg} mg) to Food Bank${sourceLabel ? ' via ' + sourceLabel : ''}.`);
+      return savedObj;
+    }
+
+    function deleteCustomFood(id) {
+      state.customFoods = state.customFoods.filter(f => f.id !== id);
+      saveState();
+      renderAll();
+    }
+
+    function showBankToast(msg) {
+      const el = document.getElementById('bank-toast');
+      if (!el) return;
+      el.textContent = msg;
+      el.classList.add('show');
+      clearTimeout(el._timer);
+      el._timer = setTimeout(() => el.classList.remove('show'), 4500);
     }
 
     function changeDate(delta) {
@@ -955,6 +1202,14 @@
       return state.diary[dateStr];
     }
 
+    function defaultMealForNow() {
+      const h = new Date().getHours();
+      if (h < 11) return 'Breakfast';
+      if (h < 15) return 'Lunch';
+      if (h < 21) return 'Dinner';
+      return 'Snacks';
+    }
+
     function addEntry(meal, name, serve, mg) {
       const day = getDayEntries(currentDate);
       day[meal].push({ id: Date.now() + Math.random(), name, serve, mg: Math.round(mg) });
@@ -976,6 +1231,7 @@
     }
 
     function renderAll() {
+      updateKeyIndicator();
       document.getElementById('date-display').textContent = formatDateLabel(currentDate);
       const day = getDayEntries(currentDate);
       let totalMg = 0;
@@ -1043,7 +1299,7 @@
     function renderSmartSuggestions(rem) {
       const heading = document.getElementById('suggest-heading');
       const chipsEl = document.getElementById('suggest-chips');
-      const targetMeal = new Date().getHours() < 11 ? 'Breakfast' : new Date().getHours() < 15 ? 'Lunch' : 'Dinner';
+      const targetMeal = defaultMealForNow();
 
       if (rem <= 0) {
         heading.textContent = 'Daily Target Reached!';
@@ -1053,11 +1309,11 @@
 
       heading.textContent = `1-Tap Boosters (${rem} mg left — logs to ${targetMeal})`;
       const picks = [
-        { name: 'Calcium-Set Firm Tofu', serve: '120 g', mg: 250 },
-        { name: 'Canned Salmon (with bones)', serve: '100 g', mg: 220 },
-        { name: 'Fortified Coconut Yogurt', serve: '150 g', mg: 190 },
-        { name: 'Cooked Bok Choy / Kale', serve: '1 cup', mg: 140 },
-        { name: 'Dukkah / Tahini', serve: '1 tbsp', mg: 90 }
+        { name: 'Calcium-Set Firm Tofu (516)', serve: '120 g', mg: 250 },
+        { name: 'Canned Red/Pink Salmon (with bones)', serve: '100 g', mg: 220 },
+        { name: 'Calcium-Fortified Coconut Yogurt', serve: '150 g tub', mg: 190 },
+        { name: 'Bok Choy / Kale (cooked)', serve: '1 cup', mg: 140 },
+        { name: 'Dukkah (sesame-rich)', serve: '1 tbsp (15 g)', mg: 90 }
       ];
 
       chipsEl.innerHTML = picks.map(p => `
@@ -1101,15 +1357,357 @@
       if (matchedCount > 0) {
         input.value = '';
       } else {
-        alert('No exact database match found—try tapping "+ Add Food" to pick from the list or add a custom food.');
+        alert('No match in your saved Food Bank yet—tap "+ Add Food" or go to Food Bank to search online or scan it.');
       }
     }
 
+    // ==========================================
+    // ONLINE FOOD SEARCH (OPEN FOOD FACTS + AI)
+    // ==========================================
+    function extractOffCalciumMg(nutriments) {
+      if (!nutriments) return null;
+      const unit = (nutriments.calcium_unit || 'g').toLowerCase();
+      if (nutriments.calcium_serving != null && !isNaN(nutriments.calcium_serving)) {
+        const val = Number(nutriments.calcium_serving);
+        if (val <= 0) return 0;
+        return unit === 'mg' && val > 5 ? Math.round(val) : Math.round(val * 1000);
+      }
+      if (nutriments.calcium_100g != null && !isNaN(nutriments.calcium_100g)) {
+        const val = Number(nutriments.calcium_100g);
+        if (val <= 0) return 0;
+        return unit === 'mg' && val > 5 ? Math.round(val) : Math.round(val * 1000);
+      }
+      return null;
+    }
+
+    async function runOnlineFoodSearch(query, context) {
+      const targetBox = document.getElementById(context === 'diary' ? 'sheet-online-prompt' : 'bank-online-prompt');
+      targetBox.innerHTML = `<div class="online-box" style="font-size:13px;color:var(--primary-dark);font-weight:700;">Searching online for "${escapeHtml(query)}"...</div>`;
+
+      try {
+        const url = `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(query)}&search_simple=1&action=process&json=1&page_size=5&lc=en&cc=au`;
+        const res = await fetch(url);
+        const data = await res.json();
+        const products = (data.products || []).filter(p => p.product_name);
+
+        let html = `<div class="online-box">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <span style="font-size:12px;font-weight:800;color:var(--text);">Online Results for "${escapeHtml(query)}"</span>
+            <button class="btn-accent" style="padding:5px 9px;font-size:11px;" onclick="estimateWithGemini('${escapeAttr(query)}', '${context}')">Ask AI &amp; Save</button>
+          </div>
+          <div class="online-results">`;
+
+        if (products.length === 0) {
+          html += `<div style="font-size:12px;color:var(--muted);">No exact Open Food Facts match found. Tap <strong>Ask AI &amp; Save</strong> above to estimate calcium and save to your Food Bank.</div>`;
+        } else {
+          products.forEach((p, idx) => {
+            const brand = p.brands ? p.brands.split(',')[0].trim() : '';
+            const fullName = brand && !p.product_name.toLowerCase().includes(brand.toLowerCase())
+              ? `${brand} ${p.product_name}`
+              : p.product_name;
+            const serve = p.serving_size || '100 g / 100 ml';
+            const mg = extractOffCalciumMg(p.nutriments);
+            const hasCa = mg !== null && mg > 0;
+
+            html += `
+              <div class="online-item">
+                <div style="min-width:0;flex:1;">
+                  <div style="font-weight:700;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(fullName)}</div>
+                  <div style="font-size:11px;color:var(--muted);">${escapeHtml(serve)} &bull; ${hasCa ? `<strong>${mg} mg calcium</strong>` : 'Calcium not listed on barcode'}</div>
+                </div>
+                ${hasCa
+                  ? `<button class="btn-primary" style="padding:6px 10px;font-size:11px;" onclick="acceptOnlineItem('${escapeAttr(fullName)}', '${escapeAttr(serve)}', ${mg}, 'LF', '${context}')">Save${context === 'diary' ? ' &amp; Log' : ''}</button>`
+                  : `<button class="btn-accent" style="padding:6px 10px;font-size:11px;" onclick="estimateWithGemini('${escapeAttr(fullName)} (${escapeAttr(serve)})', '${context}')">AI Fill</button>`
+                }
+              </div>
+            `;
+          });
+        }
+
+        html += `</div></div>`;
+        targetBox.innerHTML = html;
+      } catch (err) {
+        targetBox.innerHTML = `<div class="online-box">
+          <div style="font-size:12px;color:var(--danger);margin-bottom:6px;">Could not reach Open Food Facts.</div>
+          <button class="btn-accent" style="width:100%;" onclick="estimateWithGemini('${escapeAttr(query)}', '${context}')">Estimate Calcium with Gemini AI &amp; Save</button>
+        </div>`;
+      }
+    }
+
+    function acceptOnlineItem(name, serve, mg, tag, context) {
+      const saved = addToFoodBank({ name, serve, mg, tag }, 'Online Search');
+      if (context === 'diary') {
+        const finalMg = Math.round(saved.mg * currentMult);
+        const finalServe = currentMult === 1 ? saved.serve : `${currentMult} × ${saved.serve}`;
+        addEntry(activeMeal, saved.name, finalServe, finalMg);
+        closeAddSheet();
+      } else {
+        document.getElementById('bank-search').value = '';
+        renderFoodBank();
+      }
+    }
+
+    async function estimateWithGemini(foodQuery, context) {
+      const apiKey = getApiKey();
+      if (!apiKey) {
+        alert('Please paste your free Google AI Studio key in Settings (top-right) first, or snap the Nutrition Label / add manually.');
+        openSettingsModal();
+        return;
+      }
+
+      const targetBox = document.getElementById(context === 'diary' ? 'sheet-online-prompt' : 'bank-online-prompt');
+      targetBox.innerHTML = `<div class="online-box" style="font-size:13px;color:var(--accent);font-weight:700;">Asking Gemini AI for Australian calcium info on "${escapeHtml(foodQuery)}"...</div>`;
+
+      const prompt = `You are an Australian nutrition assistant helping a lactose-free user track calcium (mg).
+Given the food query: "${foodQuery}", return typical Australian (FSANZ / supermarket) nutritional values for one standard serving.
+Respond ONLY with valid JSON matching this schema:
+{"name": "Clean Product or Food Name", "serve": "Standard serving size e.g. 200 ml or 100 g", "mg": 120, "tag": "LF"}
+Rules for "tag": use "FORT" if commonly calcium-fortified (like fortified soy/almond milk or coconut yogurt), "LOW" if aged low-lactose dairy (like parmesan/provolone/cheddar), or "LF" otherwise.`;
+
+      try {
+        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${encodeURIComponent(apiKey)}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: { responseMimeType: 'application/json' }
+          })
+        });
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error?.message || 'Gemini API request failed');
+
+        const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
+        const cleaned = rawText.replace(/```json|```/gi, '').trim();
+        const parsed = JSON.parse(cleaned);
+
+        const saved = addToFoodBank({
+          name: parsed.name || foodQuery,
+          serve: parsed.serve || '1 serving',
+          mg: parsed.mg || 0,
+          tag: parsed.tag || 'LF'
+        }, 'Gemini AI');
+
+        if (context === 'diary') {
+          const finalMg = Math.round(saved.mg * currentMult);
+          const finalServe = currentMult === 1 ? saved.serve : `${currentMult} × ${saved.serve}`;
+          addEntry(activeMeal, saved.name, finalServe, finalMg);
+          closeAddSheet();
+        } else {
+          document.getElementById('bank-search').value = '';
+          renderFoodBank();
+        }
+      } catch (err) {
+        targetBox.innerHTML = `<div class="online-box" style="font-size:12px;color:var(--danger);">AI lookup failed: ${escapeHtml(err.message)}</div>`;
+      }
+    }
+
+    // ==========================================
+    // BARCODE SCANNER (OPEN FOOD FACTS -> AI FALLBACK)
+    // ==========================================
+    async function openBarcodeScanner(target = 'bank') {
+      scanReturnTarget = target;
+      if (target === 'diary') closeAddSheet();
+      document.getElementById('scanner-overlay').classList.add('open');
+      const statusEl = document.getElementById('scanner-status');
+      statusEl.textContent = 'Starting camera...';
+
+      if (typeof Html5Qrcode === 'undefined') {
+        statusEl.textContent = 'Barcode library still loading—check internet connection or use Snap Label (AI).';
+        return;
+      }
+
+      try {
+        html5QrCode = new Html5Qrcode('qr-reader');
+        await html5QrCode.start(
+          { facingMode: 'environment' },
+          { fps: 10, qrbox: { width: 250, height: 140 } },
+          async (decodedText) => {
+            await stopScannerInstance();
+            await handleBarcodeResult(decodedText);
+          },
+          () => {}
+        );
+        statusEl.textContent = 'Point your rear camera at the product barcode.';
+      } catch (err) {
+        statusEl.textContent = 'Camera access blocked or unavailable. Use "Snap Label (AI)" below to take a photo instead.';
+      }
+    }
+
+    async function stopScannerInstance() {
+      if (html5QrCode) {
+        try {
+          await html5QrCode.stop();
+          html5QrCode.clear();
+        } catch (e) {}
+        html5QrCode = null;
+      }
+    }
+
+    async function closeBarcodeScanner() {
+      await stopScannerInstance();
+      document.getElementById('scanner-overlay').classList.remove('open');
+    }
+
+    function switchToLabelFallback() {
+      const target = scanReturnTarget;
+      closeBarcodeScanner();
+      triggerLabelPhoto(target);
+    }
+
+    async function handleBarcodeResult(barcode) {
+      const statusEl = document.getElementById('scanner-status');
+      statusEl.textContent = `Barcode ${barcode} detected — looking up calcium...`;
+
+      try {
+        const res = await fetch(`https://world.openfoodfacts.org/api/v2/product/${encodeURIComponent(barcode)}?fields=product_name,brands,serving_size,nutriments`);
+        const data = await res.json();
+
+        if (data.status === 1 && data.product && data.product.product_name) {
+          const p = data.product;
+          const brand = p.brands ? p.brands.split(',')[0].trim() : '';
+          const fullName = brand && !p.product_name.toLowerCase().includes(brand.toLowerCase())
+            ? `${brand} ${p.product_name}`
+            : p.product_name;
+          const serve = p.serving_size || '1 serving';
+          const mg = extractOffCalciumMg(p.nutriments);
+
+          if (mg !== null && mg > 0) {
+            await closeBarcodeScanner();
+            const saved = addToFoodBank({ name: fullName, serve, mg, tag: 'LF' }, 'Barcode');
+            if (scanReturnTarget === 'diary') {
+              addEntry(activeMeal, saved.name, saved.serve, saved.mg);
+            } else {
+              switchTab('foods');
+            }
+            return;
+          } else {
+            // Product found, but calcium missing -> trigger AI Nutrition Label fallback
+            statusEl.innerHTML = `Found <strong>${escapeHtml(fullName)}</strong>, but calcium isn't listed in the barcode database.<br/>Tap <strong>Snap Label (AI)</strong> below to read the back of the pack!`;
+            return;
+          }
+        } else {
+          statusEl.innerHTML = `Barcode <strong>${escapeHtml(barcode)}</strong> isn't in Open Food Facts yet.<br/>Tap <strong>Snap Label (AI)</strong> below to scan the Nutrition Information Panel!`;
+        }
+      } catch (err) {
+        statusEl.textContent = 'Lookup failed. Tap "Snap Label (AI)" below to read the packet directly.';
+      }
+    }
+
+    // ==========================================
+    // NUTRITION PANEL PHOTO READER (GEMINI VISION)
+    // ==========================================
+    function triggerLabelPhoto(target = 'bank') {
+      labelReturnTarget = target;
+      if (!getApiKey()) {
+        alert('To read Nutrition Panels from photos, paste your free Google AI Studio key in Settings first.');
+        openSettingsModal();
+        return;
+      }
+      const input = document.getElementById('label-photo-input');
+      input.value = '';
+      input.click();
+    }
+
+    function resizeImageToBase64(file, maxDim = 1024) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const img = new Image();
+          img.onload = () => {
+            let w = img.width;
+            let h = img.height;
+            if (w > maxDim || h > maxDim) {
+              if (w > h) {
+                h = Math.round((h * maxDim) / w);
+                w = maxDim;
+              } else {
+                w = Math.round((w * maxDim) / h);
+                h = maxDim;
+              }
+            }
+            const canvas = document.createElement('canvas');
+            canvas.width = w;
+            canvas.height = h;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, w, h);
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.82);
+            resolve(dataUrl.split(',')[1]);
+          };
+          img.onerror = reject;
+          img.src = e.target.result;
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+
+    async function handleLabelPhotoUpload(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const apiKey = getApiKey();
+      if (!apiKey) return;
+
+      switchTab('foods');
+      showBankToast('Reading Nutrition Information Panel with Gemini AI...');
+
+      try {
+        const base64Jpeg = await resizeImageToBase64(file);
+        const prompt = `Analyze this food package / Nutrition Information Panel photo for a lactose-free calcium tracker.
+Extract:
+1. "name": The brand and product name if visible (otherwise a clear descriptive food name).
+2. "serve": The serving size listed on the panel (e.g. "200 ml", "120 g", "1 slice (28 g)").
+3. "mg": The exact milligrams (mg) of Calcium per serving as an integer (if only % RDI is given based on 800mg Australian RDI, calculate mg; if none listed, estimate 0).
+4. "tag": "FORT" if calcium-fortified/added calcium is visible, "LOW" if aged low-lactose cheese, or "LF" otherwise.
+Respond ONLY with valid JSON: {"name": "...", "serve": "...", "mg": 240, "tag": "FORT"}`;
+
+        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${encodeURIComponent(apiKey)}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{
+              parts: [
+                { text: prompt },
+                { inlineData: { mimeType: 'image/jpeg', data: base64Jpeg } }
+              ]
+            }],
+            generationConfig: { responseMimeType: 'application/json' }
+          })
+        });
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error?.message || 'Vision API request failed');
+
+        const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
+        const cleaned = rawText.replace(/```json|```/gi, '').trim();
+        const parsed = JSON.parse(cleaned);
+
+        const saved = addToFoodBank({
+          name: parsed.name || 'Scanned Food Item',
+          serve: parsed.serve || '1 serving',
+          mg: parsed.mg || 0,
+          tag: parsed.tag || 'LF'
+        }, 'Label Photo');
+
+        if (labelReturnTarget === 'diary') {
+          addEntry(activeMeal, saved.name, saved.serve, saved.mg);
+          switchTab('diary');
+        }
+      } catch (err) {
+        alert('Could not read nutrition label: ' + err.message);
+      }
+    }
+
+    // ==========================================
+    // DIARY ADD SHEET & FOOD BANK RENDERING
+    // ==========================================
     function openAddSheet(meal) {
       activeMeal = meal;
       currentMult = 1;
       document.getElementById('sheet-meal-title').textContent = `Add to ${meal}`;
       document.getElementById('sheet-search').value = '';
+      document.getElementById('sheet-online-prompt').innerHTML = '';
       document.querySelectorAll('.mult-btn').forEach((b, idx) => b.classList.toggle('active', idx === 1));
       renderSheetFoods();
       document.getElementById('add-overlay').classList.add('open');
@@ -1127,8 +1725,22 @@
     }
 
     function renderSheetFoods() {
-      const q = document.getElementById('sheet-search').value.toLowerCase();
+      const rawQ = document.getElementById('sheet-search').value.trim();
+      const q = rawQ.toLowerCase();
       const list = allFoods().filter(f => f.name.toLowerCase().includes(q));
+      const promptEl = document.getElementById('sheet-online-prompt');
+
+      if (rawQ.length >= 2) {
+        promptEl.innerHTML = `
+          <div style="display:flex;justify-content:space-between;align-items:center;background:#f0fdfa;border:1px solid #99f6e4;border-radius:10px;padding:8px 10px;margin-bottom:8px;">
+            <span style="font-size:12px;color:var(--primary-dark);font-weight:600;">Not in your Food Bank?</span>
+            <button class="btn-primary" style="padding:6px 10px;font-size:11px;" onclick="runOnlineFoodSearch('${escapeAttr(rawQ)}', 'diary')">Search Online &amp; Save</button>
+          </div>
+        `;
+      } else {
+        promptEl.innerHTML = '';
+      }
+
       document.getElementById('sheet-food-list').innerHTML = list.map(f => {
         const mg = Math.round(f.mg * currentMult);
         const serve = currentMult === 1 ? f.serve : `${currentMult} × ${f.serve}`;
@@ -1149,44 +1761,60 @@
       closeAddSheet();
     }
 
-    function saveCustomFood() {
+    function saveManualCustomFood() {
       const name = document.getElementById('cust-name').value.trim();
       const serve = document.getElementById('cust-serve').value.trim() || '1 serving';
       const mg = parseInt(document.getElementById('cust-mg').value, 10);
       const tag = document.getElementById('cust-tag').value;
 
-      if (!name || isNaN(mg) || mg <= 0) {
+      if (!name || isNaN(mg) || mg < 0) {
         alert('Please enter a food name and calcium amount in mg.');
         return;
       }
 
-      state.customFoods.unshift({
-        id: 'c_' + Date.now(),
-        name,
-        serve,
-        mg,
-        tag,
-        kw: [name.toLowerCase()]
-      });
-      saveState();
+      addToFoodBank({ name, serve, mg, tag }, 'Manual Entry');
       document.getElementById('cust-name').value = '';
       document.getElementById('cust-serve').value = '';
       document.getElementById('cust-mg').value = '';
-      renderAll();
+      document.getElementById('manual-food-details').open = false;
     }
 
     function renderFoodBank() {
-      const q = (document.getElementById('bank-search')?.value || '').toLowerCase();
+      const rawQ = (document.getElementById('bank-search')?.value || '').trim();
+      const q = rawQ.toLowerCase();
       const list = allFoods().filter(f => f.name.toLowerCase().includes(q));
+      const promptEl = document.getElementById('bank-online-prompt');
+
+      if (rawQ.length >= 2) {
+        promptEl.innerHTML = `
+          <div style="display:flex;justify-content:space-between;align-items:center;background:#f0fdfa;border:1px solid #99f6e4;border-radius:12px;padding:10px 12px;margin-bottom:12px;">
+            <span style="font-size:12px;color:var(--primary-dark);font-weight:700;">Look up "${escapeHtml(rawQ)}" online?</span>
+            <button class="btn-primary" style="padding:7px 11px;font-size:12px;" onclick="runOnlineFoodSearch('${escapeAttr(rawQ)}', 'bank')">Search Online &amp; Save</button>
+          </div>
+        `;
+      } else {
+        promptEl.innerHTML = '';
+      }
+
       document.getElementById('food-bank-list').innerHTML = list.map(f => `
         <div class="meal-item">
           <div class="item-info">
-            <div class="item-title">${escapeHtml(f.name)} ${tagBadge(f.tag)}</div>
+            <div class="item-title">${escapeHtml(f.name)} ${tagBadge(f.tag)} ${f.custom ? '<span class="badge badge-saved">Saved</span>' : ''}</div>
             <div class="item-sub">${escapeHtml(f.serve)}</div>
           </div>
-          <div class="item-mg" style="color:var(--primary);">${f.mg} mg</div>
+          <div class="item-right">
+            <span class="item-mg" style="color:var(--primary);">${f.mg} mg</span>
+            <button class="mini-log-btn" onclick="quickLogFromBank('${escapeAttr(f.name)}', '${escapeAttr(f.serve)}', ${f.mg})">+ Log</button>
+            ${f.custom ? `<button class="del-btn" onclick="deleteCustomFood('${f.id}')" title="Delete custom food">&times;</button>` : ''}
+          </div>
         </div>
       `).join('');
+    }
+
+    function quickLogFromBank(name, serve, mg) {
+      const meal = defaultMealForNow();
+      addEntry(meal, name, serve, mg);
+      showBankToast(`Logged "${name}" (${mg} mg) to ${meal}.`);
     }
 
     function renderTrends() {
@@ -1237,12 +1865,14 @@
       if (tab === 'trends') renderTrends();
     }
 
-    function openBackupModal() {
-      document.getElementById('backup-overlay').classList.add('open');
+    function openSettingsModal() {
+      document.getElementById('gemini-key-input').value = getApiKey();
+      document.getElementById('key-saved-msg').textContent = getApiKey() ? 'Key active on this device.' : '';
+      document.getElementById('settings-overlay').classList.add('open');
     }
 
-    function closeBackupModal() {
-      document.getElementById('backup-overlay').classList.remove('open');
+    function closeSettingsModal() {
+      document.getElementById('settings-overlay').classList.remove('open');
     }
 
     function exportBackup() {
@@ -1269,7 +1899,7 @@
             };
             saveState();
             renderAll();
-            closeBackupModal();
+            closeSettingsModal();
             alert('Backup restored successfully!');
           }
         } catch (err) {
@@ -1303,7 +1933,7 @@
       };
       saveState();
       renderAll();
-      closeBackupModal();
+      closeSettingsModal();
     }
 
     function escapeHtml(str) {
